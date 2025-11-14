@@ -32,17 +32,4 @@ public class Laberinto {
     public void setCelda(int x, int y, CeldaLaberinto celda) {
         this.cuadricula[y][x] = celda;
     }
-
-    public void printAscii() {
-        for (int y = 0; y < alto; y++) {
-            for (int x = 0; x < ancho; x++) {
-                if (cuadricula[y][x].isPared()) {
-                    System.out.print("# ");
-                } else {
-                    System.out.print("  ");
-                }
-            }
-            System.out.println();
-        }
-    }
 }

@@ -82,6 +82,7 @@ public class GeneradorLaberinto {
             }
         }
 
+        //Escoge una entrada y salida aleatoria de la lista de posibles
         int[] entrada = posibles.get(rand.nextInt(posibles.size()));
         int[] salida;
         do {

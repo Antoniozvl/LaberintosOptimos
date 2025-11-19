@@ -22,7 +22,7 @@ public class GeneradorLaberinto {
         //Inicializamos todo como paredes
         for (int y = 0; y < alto; y++) {
             for (int x = 0; x < ancho; x++) {
-                laberinto.setCelda(x, y, new CeldaLaberinto(true, 0));
+                laberinto.setCelda(x, y, new CeldaLaberinto(true));
             }
         }
 
@@ -30,7 +30,6 @@ public class GeneradorLaberinto {
         int inicioX = 1;
         int inicioY = 1;
         laberinto.getCelda(inicioX, inicioY).setPared(false);
-        laberinto.getCelda(inicioX, inicioY).setCosto(rand.nextInt(9) + 1);
 
         //Lista de paredes adyacentes a pasillos
         List<int[]> paredes = new ArrayList<>();
@@ -50,10 +49,7 @@ public class GeneradorLaberinto {
             //Sí la celda subsecuente está dentro del laberinto y no se ha modificado(es pared)
             if (nx > 0 && nx < ancho && ny > 0 && ny < alto && laberinto.getCelda(nx, ny).isPared()) {
                 laberinto.getCelda(x, y).setPared(false);
-                laberinto.getCelda(x, y).setCosto(rand.nextInt(9) + 1);
-
                 laberinto.getCelda(nx, ny).setPared(false);
-                laberinto.getCelda(nx, ny).setCosto(rand.nextInt(9) + 1);
 
                 agregarParedes(paredes, nx, ny, ancho, alto);
             }
@@ -90,10 +86,7 @@ public class GeneradorLaberinto {
         } while (Arrays.equals(entrada, salida));
 
         laberinto.getCelda(entrada[0], entrada[1]).setPared(false);
-        laberinto.getCelda(entrada[0], entrada[1]).setCosto(rand.nextInt(9) + 1);
-
         laberinto.getCelda(salida[0], salida[1]).setPared(false);
-        laberinto.getCelda(salida[0], salida[1]).setCosto(rand.nextInt(9) + 1);
 
         return laberinto;
     }

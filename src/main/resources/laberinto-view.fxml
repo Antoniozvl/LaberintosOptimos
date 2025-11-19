@@ -9,19 +9,24 @@
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.layout.StackPane?>
 
+<?import javafx.scene.control.TextArea?>
 <BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="estruct_datos.laberintosoptimos.Controladores.ControladorLaberinto">
     <left>
-        <VBox spacing="10" alignment="CENTER" prefWidth="200" style="-fx-background-color: black; -fx-padding: 10;">
-            <Label text="Configuración" style="-fx-text-fill: white; -fx-font-size: 16;"/>
-            <HBox spacing="5">
-                <Label text="Ancho:" style="-fx-text-fill: white;"/>
-                <Spinner fx:id="anchoSpinner" prefWidth="80"/>
-            </HBox>
-            <HBox spacing="5">
-                <Label text="Alto:" style="-fx-text-fill: white;"/>
-                <Spinner fx:id="altoSpinner" prefWidth="80"/>
-            </HBox>
-            <Button fx:id="generarLab" text="Generar Laberinto" prefWidth="150"/>
+        <VBox spacing="150" alignment="CENTER" prefWidth="200" style="-fx-background-color: black; -fx-padding: 10;">
+            <VBox spacing="25">
+                <Label text="Configuración" style="-fx-text-fill: white; -fx-font-size: 16;"/>
+                <HBox spacing="5">
+                    <Label text="Ancho:" style="-fx-text-fill: white;"/>
+                    <Spinner fx:id="anchoSpinner" prefWidth="80"/>
+                </HBox>
+                <HBox spacing="5">
+                    <Label text="Alto:" style="-fx-text-fill: white;"/>
+                    <Spinner fx:id="altoSpinner" prefWidth="80"/>
+                </HBox>
+                <Button fx:id="generarLab" text="Generar Laberinto" prefWidth="150" prefHeight="30"/>
+                <Button fx:id="rutaOptima" text="Generar ruta óptima" prefWidth="150" prefHeight="30"/>
+            </VBox>
+            <TextArea fx:id="consolaInfo" editable="false" prefHeight="300" style="-fx-font-size: 15; -fx-control-inner-background: rgb(177,180,185); -fx-text-fill: black"/>
         </VBox>
     </left>
 

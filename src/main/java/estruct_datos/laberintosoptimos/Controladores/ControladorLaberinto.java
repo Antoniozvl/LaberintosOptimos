@@ -41,11 +41,17 @@ public class ControladorLaberinto {
     private final GeneradorLaberinto generador = new GeneradorLaberinto();
     private Laberinto laberinto;
 
+    //Determina si hay una animación en curso
+    private boolean animacion = false;
+
+    //Almacenan el tiempo (hora actual) de inicio y de fin
+    private long tiempoInicio, tiempoFin;
+
     private Image imaPared;
     private Image imaSuelo;
     private Image imaMeta;
     private Image imaPersonaje;
-    private Image imaPisada;
+    private Image imaPisada, imaVuelta;
 
     //Lista de coordenadas para la ruta
     private final List<int[]> ruta = new ArrayList<>();
@@ -66,8 +72,9 @@ public class ControladorLaberinto {
         imaPared = new Image(Objects.requireNonNull(getClass().getResource("/Imagenes/Pared.jpg")).toExternalForm());
         imaSuelo = new Image(Objects.requireNonNull(getClass().getResource("/Imagenes/Suelo.jpg")).toExternalForm());
         imaMeta = new Image(Objects.requireNonNull(getClass().getResource("/Imagenes/Meta.jpg")).toExternalForm());
-        imaPersonaje = new Image(Objects.requireNonNull(getClass().getResource("/Imagenes/Personaje.jpg")).toExternalForm());
+        imaPersonaje = new Image(Objects.requireNonNull(getClass().getResource("/Imagenes/Personaje.png")).toExternalForm());
         imaPisada = new Image(Objects.requireNonNull(getClass().getResource("/Imagenes/Pisada.png")).toExternalForm());
+        imaVuelta = new Image(Objects.requireNonNull(getClass().getResource("/Imagenes/Vuelta.png")).toExternalForm());
 
         //Redimensiona el tamaño del laberinto
         canvas.widthProperty().bind(contenedorCanvas.widthProperty());
@@ -81,6 +88,11 @@ public class ControladorLaberinto {
 
         //Genera laberinto al presionar el botón
         generarLab.setOnAction(e -> {
+            //Si hay una animación en proceso no hace nada
+            if (animacion) {
+                return;
+            }
+
             //Quita la meta y el personaje
             personajeX = -1;
             personajeY = -1;
@@ -93,6 +105,12 @@ public class ControladorLaberinto {
 
         //Maneja el evento al clickear canvas
         canvas.setOnMouseClicked(event -> {
+            //Si hay una animación en proceso no hace nada
+            if (animacion) {
+                return;
+            }
+
+            //Obtiene la posición del mouse
             double mouseX = event.getX();
             double mouseY = event.getY();
 
@@ -131,7 +149,15 @@ public class ControladorLaberinto {
 
         //Genera la ruta óptima mediante algoritmo A*
         rutaOptima.setOnAction(e -> {
-            if (personajeX != -1 && metaX != -1) {
+            //La meta y el personaje deben estar en el tablero
+            if (personajeX != -1 && metaX != -1 && !animacion) {
+                //Si están en la misma casilla, retorna (evita problemas después de 1ra ejecución)
+                if (personajeX == metaX && personajeY == metaY) {
+                    return;
+                }
+                
+                tiempoInicio = System.currentTimeMillis();
+                animacion = true;
                 consolaInfo.setText("Buscando ruta...");
                 mostrarMatriz();
 
@@ -160,77 +186,213 @@ public class ControladorLaberinto {
         g.fillRect(inicio.x * anchoCelda, inicio.y * altoCelda, anchoCelda, altoCelda);
 
         PauseTransition delay = new PauseTransition(Duration.seconds(0.2));
-            delay.setOnFinished(event -> {
-                //Encuentra el nodo con mejor costoF
-                Nodo actual = openSet.get(0);
-                for (Nodo nodo : openSet) {
-                    if (nodo.costoF < actual.costoF) {
-                        actual = nodo;
+        delay.setOnFinished(event -> {
+            //Encuentra el nodo con mejor costoF
+            Nodo actual = openSet.get(0);
+            for (Nodo nodo : openSet) {
+                if (nodo.costoF < actual.costoF) {
+                    actual = nodo;
+                }
+            }
+
+            //Mueve el nodo actual de openSet a closedSet
+            openSet.remove(actual);
+            closedSet.add(actual);
+            g.setFill(Color.GREEN);
+            g.fillRect(actual.x * anchoCelda, actual.y * altoCelda, anchoCelda, altoCelda);
+
+            //Si es la meta, reconstruye el camino
+            if (actual.x == metaX && actual.y == metaY) {
+                reconstruirCamino(actual);
+
+                PauseTransition delay2 = new PauseTransition(Duration.seconds(0.2));
+                delay2.setOnFinished(e -> {
+                    //Dibuja la ruta en la matriz
+                    mostrarMatriz();
+                    g.setFill(Color.BLUE);
+
+                    //Imprime las coordenadas de la ruta
+                    System.out.println("\nLista de coordenadas");
+                    for (int[] pasos : ruta) {
+                        System.out.print("(" + pasos[0] + "," + pasos[1] + ") -> ");
+                        g.fillRect(pasos[0] * anchoCelda, pasos[1] * altoCelda, anchoCelda, altoCelda);
                     }
+
+                    consolaInfo.setText("¡Ruta encontrada!\nLongitud: " + (ruta.size() - 1) + " pasos.");
+
+                    //Animación de personaje hacia meta
+                    PauseTransition delay3 = new PauseTransition(Duration.seconds(0.5));
+                    delay3.setOnFinished(ev -> movimientoPersonaje());
+                    delay3.play();
+                });
+                delay2.play();
+                return;
+            }
+
+            //Explora a los vecinos
+            for (int[] direccion : new int[][]{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}) { //Arriba, derecha, abajo, izquierda
+                int nuevoX = actual.x + direccion[0];
+                int nuevoY = actual.y + direccion[1];
+
+                //Verifica si está dentro del laberinto y no es pared
+                Nodo vecino;
+                if (nuevoX >= 0 && nuevoX < laberinto.getAncho() && nuevoY >= 0 && nuevoY < laberinto.getAlto() && !laberinto.getCelda(nuevoX, nuevoY).isPared()) {
+                    vecino = new Nodo(nuevoX, nuevoY, actual, actual.costoG + 1, Math.abs(nuevoX - metaX) + Math.abs(nuevoY - metaY));
+                } else {
+                    continue;
                 }
 
-                //Mueve el nodo actual de openSet a closedSet
-                openSet.remove(actual);
-                closedSet.add(actual);
-                g.setFill(Color.GREEN);
-                g.fillRect(actual.x * anchoCelda, actual.y * altoCelda, anchoCelda, altoCelda);
-
-                //Si es la meta, reconstruye el camino
-                if (actual.x == metaX && actual.y == metaY) {
-                    reconstruirCamino(actual);
-
-                    PauseTransition delay2 = new PauseTransition(Duration.seconds(0.2));
-                    delay2.setOnFinished(e -> {
-                        //Dibuja la ruta en la matriz
-                        mostrarMatriz();
-                        g.setFill(Color.BLUE);
-                        System.out.println("\nLista de coordenadas");
-                        for (int[] pasos : ruta) {
-                            System.out.print("(" + pasos[0] + "," + pasos[1] + ") -> ");
-                            g.fillRect(pasos[0] * anchoCelda, pasos[1] * altoCelda, anchoCelda, altoCelda);
-                        }
-
-                        consolaInfo.setText("¡Ruta encontrada!\nLongitud: " + (ruta.size() - 1) + " pasos.");
-
-                        //Animación de personaje hacia meta
-                        PauseTransition delay3 = new PauseTransition(Duration.seconds(0.5));
-                        delay3.setOnFinished(ev -> {
-                            dibujarLaberinto();
-                        });
-                        delay3.play();
-                    });
-                    delay2.play();
-                    return;
+                //Si ya está en closedSet, continúa con el siguiente vecino
+                if (closedSet.contains(vecino)) {
+                    continue;
                 }
 
-                //Explora a los vecinos
-                for (int[] direccion : new int[][]{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}) { //Arriba, derecha, abajo, izquierda
-                    int nuevoX = actual.x + direccion[0];
-                    int nuevoY = actual.y + direccion[1];
-
-                    //Verifica si está dentro del laberinto y no es pared
-                    Nodo vecino;
-                    if (nuevoX >= 0 && nuevoX < laberinto.getAncho() && nuevoY >= 0 && nuevoY < laberinto.getAlto() && !laberinto.getCelda(nuevoX, nuevoY).isPared()) {
-                        vecino = new Nodo(nuevoX, nuevoY, actual, actual.costoG + 1, Math.abs(nuevoX - metaX) + Math.abs(nuevoY - metaY));
-                    } else {
-                        continue;
-                    }
-
-                    //Si ya está en closedSet, continúa con el siguiente vecino
-                    if (closedSet.contains(vecino)) {
-                        continue;
-                    }
-
-                    //Si no está en abiertos, lo agrega
-                    if (!openSet.contains(vecino)) {
-                        openSet.add(vecino);
-                        g.setFill(Color.RED);
-                        g.fillRect(vecino.x * anchoCelda, vecino.y * altoCelda, anchoCelda, altoCelda);
-                    }
+                //Si no está en abiertos, lo agrega
+                if (!openSet.contains(vecino)) {
+                    openSet.add(vecino);
+                    g.setFill(Color.RED);
+                    g.fillRect(vecino.x * anchoCelda, vecino.y * altoCelda, anchoCelda, altoCelda);
                 }
-                delay.play();
-            });
+            }
             delay.play();
+        });
+        delay.play();
+    }
+
+    private void movimientoPersonaje() {
+        //Pasa de la matriz al laberinto
+        dibujarLaberinto();
+
+        GraphicsContext g = canvas.getGraphicsContext2D();
+        double anchoCelda = canvas.getWidth() / laberinto.getAncho();
+        double altoCelda = canvas.getHeight() / laberinto.getAlto();
+
+        //Inicia movimiento en la primer coordenada
+        moverCasilla(0, g, anchoCelda, altoCelda);
+    }
+
+    private void moverCasilla(int contador, GraphicsContext g, double anchoCelda, double altoCelda) {
+        //Si es la meta, termina la animación
+        if (contador == ruta.size() - 1) {
+            tiempoFin = System.currentTimeMillis();
+
+            //Convierte los ms tardados a seg
+            double tiempoSeg = (double) (tiempoFin - tiempoInicio) / 1000;
+            //Limita a 2 decimales
+            String tiempo = String.format("%.2f", tiempoSeg);
+
+            consolaInfo.setText("¡El personaje llegó a la \nmeta!\n\nLongitud: " + (ruta.size() - 1) + " pasos.\n\nTiempo: " + tiempo + "seg.");
+            animacion = false;
+            return;
+        }
+
+        PauseTransition delay = new PauseTransition(Duration.seconds(0.4));
+        delay.setOnFinished(actionEvent -> {
+            //Borra al personaje dibujando el suelo, dibujando el suelo
+            g.drawImage(imaSuelo, personajeX * anchoCelda, personajeY * altoCelda, anchoCelda, altoCelda);
+
+            //Determina la dirección del movimiento actual
+            int[] posActual = ruta.get(contador);
+            int[] posSiguiente = ruta.get(contador + 1);
+
+            int direccionX = posSiguiente[0] - posActual[0];
+            int direccionY = posSiguiente[1] - posActual[1];
+
+            //Determina si es un vértice (vuelta)
+            boolean vertice = false;
+            if (contador > 0) {
+                int[] posAnterior = ruta.get(contador - 1);
+                int direccionAnteriorX = posActual[0] - posAnterior[0];
+                int direccionAnteriorY = posActual[1] - posAnterior[1];
+
+                if (direccionX != direccionAnteriorX || direccionY != direccionAnteriorY) {
+                    vertice = true;
+                    //Dibuja la vuelta
+                    rotarVuelta(g, anchoCelda, altoCelda, direccionAnteriorX, direccionAnteriorY, direccionX, direccionY);
+                }
+            }
+
+            //Dibuja la pisada
+            if (!vertice) {
+                rotarYDibujar(imaPisada, g, anchoCelda, altoCelda, direccionX, direccionY);
+            }
+
+            //Mueve al personaje a la siguiente casilla de la ruta
+            personajeX = ruta.get(contador + 1)[0];
+            personajeY = ruta.get(contador + 1)[1];
+
+            //Dibuja al personaje rotado según la dirección
+            rotarYDibujar(imaPersonaje, g, anchoCelda, altoCelda, direccionX, direccionY);
+
+            //Llama de nuevo a la función para la siguiente coordenada
+            moverCasilla(contador + 1, g, anchoCelda, altoCelda);
+        });
+        delay.play();
+    }
+
+    private void rotarVuelta(GraphicsContext g, double anchoCelda, double altoCelda, int direccionAnteriorX, int direccionAnteriorY, int direccionX, int direccionY) {
+        g.save();
+
+        //Calcula el centro de la imagen
+        double centroX = personajeX * anchoCelda + anchoCelda / 2;
+        double centroY = personajeY * altoCelda + altoCelda / 2;
+
+        g.translate(centroX, centroY);
+
+        //Grados a rotar
+        double grados = 0; //Derecha -> abajo ó arriba -> izquierda (predeterminado)
+        if (direccionAnteriorX == 1 && direccionY == -1 || //Derecha -> arriba
+                direccionAnteriorY == 1 && direccionX == -1) { //Abajo -> izquierda
+            grados = 90;
+        } else if (direccionAnteriorY == -1 && direccionX == 1 || //Arriba -> derecha
+                direccionAnteriorX == -1 && direccionY == 1) { //Izquierda -> abajo
+            grados = -90;
+        } else if (direccionAnteriorX == -1 && direccionY == -1 || //Izquierda -> arriba
+                    direccionAnteriorY == 1 && direccionX == 1) { //Abajo -> derecha
+            grados = 180;
+        }
+
+        g.rotate(grados);
+
+        //Dibuja según rotación
+        if (grados == 90 || grados == -90) {
+            g.drawImage(imaVuelta, -altoCelda / 2, -anchoCelda / 2, altoCelda, anchoCelda);
+        } else {
+            g.drawImage(imaVuelta, -anchoCelda / 2, -altoCelda / 2, anchoCelda, altoCelda);
+        }
+
+        g.restore();
+    }
+
+    private void rotarYDibujar(Image imagen, GraphicsContext g, double anchoCelda, double altoCelda, int direccionX, int direccionY) {
+        g.save();
+
+        //Calcula el centro de la imagen
+        double centroX = personajeX * anchoCelda + anchoCelda / 2;
+        double centroY = personajeY * altoCelda + altoCelda / 2;
+
+        g.translate(centroX, centroY);
+
+        //Grados a rotar
+        double grados = 0; //Arriba (predeterminado)
+        if (direccionX == 1) { //Derecha
+            grados = 90;
+        } else if (direccionX == -1) { //Izquierda
+            grados = -90;
+        } else if (direccionY == 1) { //Abajo
+            grados = 180;
+        }
+
+        g.rotate(grados);
+
+        //Dibuja según rotación
+        if (grados == 90 || grados == -90) {
+            g.drawImage(imagen, -altoCelda / 2, -anchoCelda / 2, altoCelda, anchoCelda);
+        } else {
+            g.drawImage(imagen, -anchoCelda / 2, -altoCelda / 2, anchoCelda, altoCelda);
+        }
+
+        g.restore();
     }
 
     private void reconstruirCamino(Nodo nodoFinal) {
@@ -282,7 +444,6 @@ public class ControladorLaberinto {
 
                 //Dibujar valor
                 g.setFill(Color.BLACK);
-
                 if (celda.isPared()) {
                     g.fillText("1", x * anchoCelda + anchoCelda / 2 - 4, y * altoCelda + altoCelda / 2 + 5);
                 } else {

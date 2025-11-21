@@ -24,10 +24,6 @@ public class Laberinto {
         return cuadricula[y][x];
     }
 
-    public CeldaLaberinto[][] getCuadricula() {
-        return cuadricula;
-    }
-
     //Setters
     public void setCelda(int x, int y, CeldaLaberinto celda) {
         this.cuadricula[y][x] = celda;

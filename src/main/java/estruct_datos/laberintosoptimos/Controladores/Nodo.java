@@ -18,14 +18,17 @@ public class Nodo {
 
     @Override
     public boolean equals(Object obj) {
+        //Compara referencias
         if (this == obj) {
             return true;
         }
 
+        //Si es nulo o no son la misma clase(Nodo)
         if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
 
+        //Si no tiene la misma referencia, no son nulos y ambos son nodos, verifica si las coordenadas son las mismas
         Nodo test = (Nodo) obj;
         return x == test.x && y == test.y;
     }

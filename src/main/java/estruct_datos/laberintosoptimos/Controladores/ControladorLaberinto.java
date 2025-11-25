@@ -21,6 +21,7 @@ import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 public class ControladorLaberinto {
     @FXML
@@ -164,6 +165,37 @@ public class ControladorLaberinto {
                 PauseTransition delay = new PauseTransition(Duration.seconds(0.2));
                 delay.setOnFinished(event -> algoritmoEstrella());
                 delay.play();
+            } else if (!animacion) { //Genera al personaje y la meta de forma aleatoria
+                Random random = new Random();
+
+                //Añade a la lista todas las celdas que sean pasillo
+                List<int[]> pasillos = new ArrayList<>();
+                for (int y = 0; y < laberinto.getAlto(); y++) {
+                    for (int x = 0; x < laberinto.getAncho(); x++) {
+                        if (!laberinto.getCelda(x,y).isPared()) {
+                            pasillos.add(new int[]{x, y});
+                        }
+                    }
+                }
+
+                //Coloca el personaje en una celda aleatoria
+                int indicePersonaje = random.nextInt(pasillos.size());
+                int[] posicionPersonaje = pasillos.get(indicePersonaje);
+                personajeX = posicionPersonaje[0];
+                personajeY = posicionPersonaje[1];
+
+                //Colocar meta en celda aleatoria diferente al personaje
+                int indiceMeta;
+                do {
+                    indiceMeta = random.nextInt(pasillos.size());
+                } while (indiceMeta == indicePersonaje);
+
+                int[] posicionMeta = pasillos.get(indiceMeta);
+                metaX = posicionMeta[0];
+                metaY = posicionMeta[1];
+
+                //Muestra el personaje y la meta
+                dibujarLaberinto();
             }
         });
     }
@@ -286,7 +318,7 @@ public class ControladorLaberinto {
             return;
         }
 
-        PauseTransition delay = new PauseTransition(Duration.seconds(0.4));
+        PauseTransition delay = new PauseTransition(Duration.seconds(0.2));
         delay.setOnFinished(actionEvent -> {
             //Borra al personaje dibujando el suelo, dibujando el suelo
             g.drawImage(imaSuelo, personajeX * anchoCelda, personajeY * altoCelda, anchoCelda, altoCelda);
@@ -518,7 +550,7 @@ public class ControladorLaberinto {
 
         //Actualiza consolaInfo
         if (metaX == -1 || personajeX == -1) {
-            consolaInfo.setText("\nLaberinto generado.\nColoca el personaje \n(clic izquierdo) y la \nmeta (clic derecho) \npara poder generar la \nruta óptima.");
+            consolaInfo.setText("\nLaberinto generado.\nColoca el personaje \n(clic izquierdo) y la \nmeta (clic derecho) \npara poder generar la \nruta óptima, de lo \ncontrario se \nestablecerán de \nforma aleatoria al \npresionar el botón.");
         } else if (ruta.isEmpty()) {
             consolaInfo.setText("\nLaberinto generado y \nlisto para generar \nruta óptima.");
         }
